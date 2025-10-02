@@ -26,18 +26,20 @@ df["month"] = df["time"].dt.month
    # Velg bakgrunnsfarge fra selectbox
    # Laget med hjelp av ChatGPT
 color_choice = st.selectbox(
- "Velg bakgrunnsfarge:",
-    ["Hvit", "Lyseblå", "Lysegrønn", "Lysegul", "Lys grå"]
-    )
+    "Velg bakgrunnsfarge:",
+    ["Hvit", "Blå", "Grønn", "Gul", "Grå", "Rød", "Svart"]
+)
 
-    # Slå opp hex-fargekoder 
+# Vanlige fargekoder (hex)
 colors = {
-        "Hvit": "#FFFFFF",
-        "Lyseblå": "#E6F2FF",
-        "Lysegrønn": "#E6FFE6",
-        "Lysegul": "#FFFFE6",
-        "Lys grå": "#F2F2F2"
-    }
+    "Hvit": "#FFFFFF",
+    "Blå": "#0000FF",
+    "Grønn": "#008000",
+    "Gul": "#FFFF00",
+    "Grå": "#808080",
+    "Rød": "#FF0000",
+    "Svart": "#000000"
+}
 bg_color = colors[color_choice]
 
     # Bruk CSS til å endre bakgrunnsfargen
