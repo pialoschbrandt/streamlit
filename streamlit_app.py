@@ -1,0 +1,211 @@
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import plotly.express as px
+import requests
+
+# Navigasjon i sidebar
+st.sidebar.title("Navigasjon")
+page = st.sidebar.radio("Gå til:", ["Hjem", "Side 2: Tabell", "Side 3: Plot", "Side 4"])
+
+# Filsti til CSV
+file = 'open-meteo-subset.csv'
+
+# funksjonen slik at data ikke lastes inn på nytt hver gang appen kjører
+@st.cache_data
+def load_data(file):
+    return pd.read_csv(file)
+
+
+# Kaller funksjonen for å laste data og lagrer den i variabel df
+df = load_data(file)
+df["time"] = pd.to_datetime(df["time"])
+df["month"] = df["time"].dt.month
+
+
+   # Velg bakgrunnsfarge fra selectbox
+   # Laget med hjelp av ChatGPT
+color_choice = st.selectbox(
+ "Velg bakgrunnsfarge:",
+    ["Hvit", "Lyseblå", "Lysegrønn", "Lysegul", "Lys grå"]
+    )
+
+    # Slå opp hex-fargekoder 
+colors = {
+        "Hvit": "#FFFFFF",
+        "Lyseblå": "#E6F2FF",
+        "Lysegrønn": "#E6FFE6",
+        "Lysegul": "#FFFFE6",
+        "Lys grå": "#F2F2F2"
+    }
+bg_color = colors[color_choice]
+
+    # Bruk CSS til å endre bakgrunnsfargen
+st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-color: {bg_color};
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# Sidene i streamlit-appen
+
+# Side 1: Hjem
+if page == "Hjem":
+    st.title("Velkommen")
+    st.header("Dette er hjem-siden")
+    st.write("Bruk menyen i sidebaren for å navigere mellom sidene.")
+
+
+# Side 2: Tabell med mini-linecharts (LineChartColumn)
+elif page == "Side 2: Tabell":
+    st.header("Tabell med rådata")
+    st.dataframe(df.head(100))  # viser de første 20 radene
+
+    st.header("Tabell med mini-linecharts")
+
+    # Filtrer januar
+    df_jan = df[df["month"] == 1]
+
+    # Velg variabler
+    variables = ["temperature_2m (°C)", "precipitation (mm)", 
+                 "wind_speed_10m (m/s)", "wind_gusts_10m (m/s)", 
+                 "wind_direction_10m (°)"]
+
+    # Bygg et nytt dataframe: én rad per variabel
+    df_spark = pd.DataFrame({
+        "Variabel": variables,
+        "Trend": [df_jan[v].tolist() for v in variables]
+    })
+
+    # Vis som tabell med mini-linjediagrammer
+    st.dataframe(
+        df_spark,
+        column_config={
+            "Trend": st.column_config.LineChartColumn(
+                "Trend (Januar)",
+                y_min=df_spark["Trend"].apply(min).min(),
+                y_max=df_spark["Trend"].apply(max).max()
+            )
+        },
+        hide_index=True,
+    )
+
+
+
+# Side 3: Plot av kolonner mot tid
+elif page == "Side 3: Plot":
+    st.header("Plot av data")
+
+    # Rensing og forberedelse av data
+    line_chart_data = df.copy() #Lager en kopi av df
+    line_chart_data['time'] = pd.to_datetime(line_chart_data['time']) #Sørger for at 'time' er i datetime-format
+    line_chart_data['day'] = line_chart_data['time'].dt.day #Legger til en kolonne for dag
+
+    # Finn alle variabler unntatt tid, dag og måned
+    variables = [c for c in line_chart_data.columns if c not in ["time", "month", "day"]]
+
+    # Velg variabel i selectbox
+    pick_a_variable = st.selectbox(
+        "Velg en variabel eller 'Alle variabler':",
+        ["Alle variabler"] + variables
+    )
+
+    # Velg måneder (fra min til maks)
+    months = sorted(line_chart_data["month"].unique()) # unike måneder i sortert rekkefølge
+    pick_month_range = st.select_slider( 
+        "Velg et månedsspenn:",
+        options=months,
+        value=(months[0], months[0])  # default = første måned
+    )
+
+    # Filtrer data på valgt månedsspenn
+    df_plot = line_chart_data[
+        (line_chart_data["month"] >= pick_month_range[0]) &
+        (line_chart_data["month"] <= pick_month_range[1])
+    ]
+
+    # Plot
+    if pick_a_variable == "Alle variabler":
+        fig = px.line(
+            df_plot,
+            x="time",
+            y=variables,
+            title=f"Alle variabler fra måned {pick_month_range[0]} til {pick_month_range[1]}"
+        )
+    else:
+        fig = px.line(
+            df_plot,
+            x="time",
+            y=pick_a_variable,
+            title=f"{pick_a_variable} fra måned {pick_month_range[0]} til {pick_month_range[1]}"
+        )
+
+    # Tilpass aksetitler
+    fig.update_layout(
+        xaxis_title="Tid",
+        yaxis_title="Verdi",
+        legend_title="Variabler",
+        template="plotly_white"
+    )
+
+    # Vis plottet
+    st.plotly_chart(fig, use_container_width=True)
+
+
+
+# Side 4: Live værdata fra Open-Meteo
+#Dette er laget med hjelp av ChatGPT
+
+elif page == "Side 4":
+    st.header("Live værdata fra Open-Meteo")
+
+    # Velg by
+    cities = {
+        "Oslo": (59.91, 10.75),
+        "Bergen": (60.39, 5.32),
+        "Trondheim": (63.43, 10.39),
+        "Tromsø": (69.65, 18.96),
+    }
+    city = st.selectbox("Velg en by:", list(cities.keys()))
+    lat, lon = cities[city]
+
+    # Hent data fra Open-Meteo
+    url = (
+        f"https://api.open-meteo.com/v1/forecast?"
+        f"latitude={lat}&longitude={lon}"
+        f"&hourly=temperature_2m,precipitation,wind_speed_10m"
+        f"&timezone=auto"
+    )
+    response = requests.get(url)
+    data = response.json()
+
+    # Lag DataFrame
+    df_weather = pd.DataFrame(data["hourly"])
+    df_weather["time"] = pd.to_datetime(df_weather["time"])
+
+    # Vis rådata (første 20 rader)
+    st.subheader(f"Timesdata for {city}")
+    st.dataframe(df_weather.head(20))
+
+    # Velg hvilken variabel du vil plotte
+    variables = ["temperature_2m", "precipitation", "wind_speed_10m"]
+    var = st.selectbox("Velg variabel å plotte:", variables)
+
+    # Plot valgt variabel
+    fig = px.line(
+        df_weather,
+        x="time",
+        y=var,
+        title=f"{var.replace('_', ' ').title()} i {city}"
+    )
+    fig.update_layout(
+        xaxis_title="Tid",
+        yaxis_title="Verdi",
+        template="plotly_white"
+    )
+    st.plotly_chart(fig, use_container_width=True)
