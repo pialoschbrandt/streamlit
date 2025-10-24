@@ -6,13 +6,16 @@ import pandas as pd
 from pymongo import MongoClient
 from urllib.parse import quote_plus
 import pymongo
+from mongodb import get_data
+
+
 
 # Navigasjon i sidebar
 st.sidebar.title("Navigasjon")
 page = st.sidebar.radio("Gå til:", ["Hjem", "Side 2: Tabell", "Side 3: Plot", "Side 4: Elhub", "Side 5: Open-Meteo"])
 
 # Filsti til CSV
-file = '/Users/pialoschbrandt/Documents/Skole/Semester-5/Ind320/Innlevering1/data/open-meteo-subset.csv'
+file = '/Users/pialoschbrandt/Documents/Skole/Semester-5/Ind320/Innlevering1/open-meteo-subset.csv'
 
 # funksjonen slik at data ikke lastes inn på nytt hver gang appen kjører
 @st.cache_data
