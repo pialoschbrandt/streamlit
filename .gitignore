@@ -1,2 +1,9 @@
+# Ignorer hemmeligheter og midlertidige filer
+.streamlit/secrets.toml
+
+# Ignorer lokale mapper og filer
 no_sync/
 .DS_Store
+.venv/
+__pycache__/
+*.pyc

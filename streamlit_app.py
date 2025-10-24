@@ -5,6 +5,7 @@ import requests
 import pandas as pd
 from pymongo import MongoClient
 from urllib.parse import quote_plus
+import pymongo
 
 # Navigasjon i sidebar
 st.sidebar.title("Navigasjon")
@@ -161,44 +162,54 @@ elif page == "Side 3: Plot":
     st.plotly_chart(fig, use_container_width=True)
 
 
-
 # Side 4: Elhub-data fra MongoDB
 elif page == "Side 4: Elhub":
     st.header("Elhub produksjonsdata fra MongoDB")
 
-    import pandas as pd
-    from pymongo import MongoClient
-    import streamlit as st
-    from urllib.parse import quote_plus
+    # ⚙️ Opprett MongoDB-forbindelse (kjøres bare én gang)
+    @st.cache_resource
+    def init_connection():
+        user = st.secrets["mongo"]["user"]
+        password = quote_plus(st.secrets["mongo"]["password"])
+        cluster = st.secrets["mongo"]["cluster"]
+
+        uri = f"mongodb+srv://{user}:{password}@{cluster}/?retryWrites=true&w=majority"
+        client = pymongo.MongoClient(uri)
+
+        # 🔍 Test at tilkoblingen fungerer (ping)
+        try:
+            client.admin.command("ping")
+            st.sidebar.success("✅ Tilkoblet MongoDB")
+        except Exception as e:
+            st.sidebar.error(f"🚨 Klarte ikke å koble til MongoDB: {e}")
+
+        return client
+
+    client = init_connection()
+
+    # 📦 Hent data (lagres i cache i 10 min)
+    @st.cache_data(ttl=600)
+    def get_data():
+        db = client[st.secrets["mongo"]["database"]]
+        collection = db[st.secrets["mongo"]["collection"]]
+        return list(collection.find())
+
+    # 🧱 Streamlit-grensesnitt
+    st.header("Elhub-data fra MongoDB")
 
     try:
-        # 🔑 Hent brukernavn og passord fra Streamlit Secrets
-        USR = st.secrets["MONGO_USER"]
-        PWD = quote_plus(st.secrets["MONGO_PASS"])  # håndterer spesialtegn
-
-        # 🔗 Bygg connection string
-        connection_string = f"mongodb+srv://{USR}:{PWD}@cluster0.12mozyp.mongodb.net/?appName=Cluster0"
-
-        # 📦 Koble til MongoDB
-        client = MongoClient(connection_string)
-        db = client["elhub"]
-        collection = db["production_per_group_hour"]
-
-        # 🧠 Hent data
-        data = list(collection.find())
+        data = get_data()
 
         if not data:
-            st.warning("Ingen data funnet i denne collection.")
+            st.warning("Ingen data funnet i databasen.")
         else:
-            # 📊 Konverter til DataFrame og vis
             df = pd.DataFrame(data).drop(columns=["_id"], errors="ignore")
-            st.success("✅ Data hentet fra MongoDB!")
+            st.success(f"✅ Hentet {len(df)} rader fra MongoDB.")
             st.dataframe(df)
 
-    except KeyError as e:
-        st.error(f"❌ Mangler secret: {e}. Sjekk .streamlit/secrets.toml")
     except Exception as e:
-        st.error(f"🚨 Feil under tilkobling eller henting av data: {e}")
+        st.error(f"🚨 Feil under henting av data: {e}")
+
 
 
 # Side 5: Live værdata fra Open-Meteo
