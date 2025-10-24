@@ -24,7 +24,7 @@ st.sidebar.title("Navigasjon")
 page = st.sidebar.radio("Gå til:", ["Hjem", "Side 2: Tabell", "Side 3: Plot", "Side 4: Elhub", "Side 5: Open-Meteo"])
 
 # Filsti til CSV
-file = '/Users/pialoschbrandt/Documents/Skole/Semester-5/Ind320/Innlevering1/open-meteo-subset.csv'
+file = 'open-meteo-subset.csv'
 
 # funksjonen slik at data ikke lastes inn på nytt hver gang appen kjører
 @st.cache_data
