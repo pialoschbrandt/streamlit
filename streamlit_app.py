@@ -1,8 +1,10 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import plotly.express as px
 import requests
+import pandas as pd
+from pymongo import MongoClient
+from urllib.parse import quote_plus
 
 # Navigasjon i sidebar
 st.sidebar.title("Navigasjon")
