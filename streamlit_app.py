@@ -1,14 +1,23 @@
+from xmlrpc import client
 import streamlit as st
-import pandas as pd
 import plotly.express as px
 import requests
 import pandas as pd
 from pymongo import MongoClient
 from urllib.parse import quote_plus
 import pymongo
-from mongodb import get_data
 
-
+# Hent data fra MongoDB
+def get_data(col):
+    try:
+        docs = list(col.find().limit(10))
+        if docs:
+            df = pd.DataFrame(docs)
+            return df
+        else:
+            st.info("Ingen dokumenter funnet i samlingen.")
+    except Exception as e:
+        st.error(f"Feil ved henting av data: {e}")
 
 # Navigasjon i sidebar
 st.sidebar.title("Navigasjon")
@@ -164,54 +173,46 @@ elif page == "Side 3: Plot":
     # Vis plottet
     st.plotly_chart(fig, use_container_width=True)
 
+# Side 4: Elhub-data fra MongoDB
+elif page == "Side 4: Elhub":
+    st.header("Elhub-data fra MongoDB")
 
 # Side 4: Elhub-data fra MongoDB
 elif page == "Side 4: Elhub":
-    st.header("Elhub produksjonsdata fra MongoDB")
+    st.header("Elhub-data fra MongoDB")
 
-    # ⚙️ Opprett MongoDB-forbindelse (kjøres bare én gang)
-    @st.cache_resource
-    def init_connection():
-        user = st.secrets["mongo"]["user"]
-        password = quote_plus(st.secrets["mongo"]["password"])
-        cluster = st.secrets["mongo"]["cluster"]
-
-        uri = f"mongodb+srv://{user}:{password}@{cluster}/?retryWrites=true&w=majority"
-        client = pymongo.MongoClient(uri)
-
-        # 🔍 Test at tilkoblingen fungerer (ping)
-        try:
-            client.admin.command("ping")
-            st.sidebar.success("✅ Tilkoblet MongoDB")
-        except Exception as e:
-            st.sidebar.error(f"🚨 Klarte ikke å koble til MongoDB: {e}")
-
-        return client
-
-    client = init_connection()
-
-    # 📦 Hent data (lagres i cache i 10 min)
+    # Hent data én gang og cache resultatet i 10 minutter
     @st.cache_data(ttl=600)
     def get_data():
         db = client[st.secrets["mongo"]["database"]]
-        collection = db[st.secrets["mongo"]["collection"]]
-        return list(collection.find())
-
-    # 🧱 Streamlit-grensesnitt
-    st.header("Elhub-data fra MongoDB")
+        col = db[st.secrets["mongo"]["collection"]]
+        return list(col.find().limit(20))  # hent maks 20 dokumenter for visning
 
     try:
-        data = get_data()
+        items = get_data()
 
-        if not data:
-            st.warning("Ingen data funnet i databasen.")
+        if not items:
+            st.warning("Ingen dokumenter funnet i databasen.")
         else:
-            df = pd.DataFrame(data).drop(columns=["_id"], errors="ignore")
-            st.success(f"✅ Hentet {len(df)} rader fra MongoDB.")
+            # Vis første dokument for å se hvilke felt som finnes
+            st.subheader("Eksempel på ett dokument:")
+            st.json(items[0])
+
+            # Vis alt som tabell
+            import pandas as pd
+            df = pd.DataFrame(items)
             st.dataframe(df)
 
+            # Hvis du vil vise noen felter pent:
+            st.subheader("Eksempelvisning av utvalgte felt:")
+            for item in items[:5]:
+                group = item.get("group", "ukjent")
+                prod = item.get("production", "N/A")
+                ts = item.get("timestamp", "N/A")
+                st.write(f"Område {group}: {prod} MW — {ts}")
+
     except Exception as e:
-        st.error(f"🚨 Feil under henting av data: {e}")
+        st.error(f"Feil ved henting av data: {e}")
 
 
 
