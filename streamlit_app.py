@@ -219,7 +219,13 @@ elif page == "Side 4: Elhub":
     # ------------------------
     # 🧹 GJØR DATA KLAR FOR PLOTTING
     # ------------------------
+# -------------------------------------
+# 🧹 Klargjør data for plotting
+# -------------------------------------
     df_ready = pd.DataFrame(items)
+    #st.write(df_ready.columns.tolist())
+    #st.json(items[0])
+
 
     # Konverter eventuelle MongoDB-dicts {"$date": ...}
     if df_ready["startTime"].apply(lambda x: isinstance(x, dict)).any():
@@ -227,9 +233,16 @@ elif page == "Side 4: Elhub":
             lambda x: x.get("$date") if isinstance(x, dict) else x
         )
 
+    # Konverter til datetime (UTC → lokal)
     df_ready["startTime"] = pd.to_datetime(df_ready["startTime"], errors="coerce", utc=True)
     df_ready["startTime"] = df_ready["startTime"].dt.tz_convert(None)
+
+    # Lag månedskolonne
     df_ready["month"] = df_ready["startTime"].dt.to_period("M").astype(str)
+
+    # (Valgfritt) Gi kort bekreftelse i stedet for å vise tabeller
+    #st.success("✅ 'startTime' konvertert til datetime og 'month'-kolonne opprettet.")
+    #st.write(df_ready.dtypes)
 
     # ------------------------
     # 📊 VISUALISERINGER
