@@ -1,9 +1,18 @@
-# Ignorer hemmeligheter og midlertidige filer
+# Streamlit secrets (skal IKKE pushes)
 .streamlit/secrets.toml
 
-# Ignorer lokale mapper og filer
-no_sync/
-.DS_Store
-.venv/
+# Python og virtuelt miljø
 __pycache__/
+.venv/
 *.pyc
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS junk
+.DS_Store
+
+# Midlertidige filer og mapper
+*.log
+*.tmp
+no_sync/

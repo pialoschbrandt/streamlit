@@ -1,2 +1,14 @@
+[theme]
+base="dark"
+primaryColor="#1E90FF"
+backgroundColor="#111111"
+secondaryBackgroundColor="#202020"
+textColor="#FFFFFF"
+
 [server]
-runOnSave = true
+headless = true
+port = 8501
+enableCORS = false
+
+[browser]
+gatherUsageStats = false
