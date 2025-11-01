@@ -16,3 +16,4 @@ __pycache__/
 *.log
 *.tmp
 no_sync/
+mal.py
