@@ -1,141 +1,150 @@
 import streamlit as st
 import pandas as pd
-import pymongo
 import plotly.express as px
+import requests
 
-def show():
-    st.header("Elhub-data fra MongoDB")
+# -----------------------------
+# Funksjon: hent data fra API
+# -----------------------------
+def hent_era5_data(latitude, longitude, year):
+    """
+    Henter historiske værdata (reanalysis ERA5) fra Open-Meteo API
+    for en gitt posisjon og år. Returnerer et pandas DataFrame.
+    """
+    start_date = f"{year}-01-01"
+    end_date = f"{year}-12-31"
 
-    # ------------------------
-    # INITIALISER TILKOBLING
-    # ------------------------
-    @st.cache_resource
-    def init_connection():
-        uri = (
-            f"mongodb+srv://{st.secrets['mongo']['user']}:"
-            f"{st.secrets['mongo']['password']}@"
-            f"{st.secrets['mongo']['cluster']}/?retryWrites=true&w=majority"
-        )
-        return pymongo.MongoClient(uri)
+    url = (
+        "https://archive-api.open-meteo.com/v1/era5?"
+        f"latitude={latitude}&longitude={longitude}&"
+        f"start_date={start_date}&end_date={end_date}&"
+        "hourly=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m,wind_direction_10m&"
+        "timezone=auto"
+    )
 
-    client = init_connection()
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
 
-    try:
-        client.admin.command("ping")
-        st.success("Tilkobling til MongoDB fungerer.")
-    except Exception as e:
-        st.error(f"Klarte ikke koble til MongoDB: {e}")
+    df = pd.DataFrame(data["hourly"])
+    df["time"] = pd.to_datetime(df["time"], errors="coerce")
+    return df
+
+
+# -----------------------------
+# Funksjon: vis side
+# -----------------------------
+def show(df=None):
+    st.header("Meteorologiske data – Open-Meteo ERA5")
+
+    # ---------------------------------------------------
+    # 1. Hent valgt område fra side 2
+    # ---------------------------------------------------
+    selected_area = st.session_state.get("selected_area")
+    if not selected_area:
+        st.warning("⚠️ Du må først velge et prisområde på side 2 (Elhub-data).")
         st.stop()
 
-    # ------------------------
-    # HENT DATA FRA MONGODB
-    # ------------------------
-    @st.cache_data(ttl=600)
-    def get_data():
-        db = client[st.secrets["mongo"]["database"]]
-        collection = db[st.secrets["mongo"]["collection"]]
-        return list(collection.find())
+    st.write(f"📍 Valgt prisområde: **{selected_area}**")
+    year = 2021
 
-    items = get_data()
-    if not items:
-        st.warning("Ingen data hentet — samlingen er kanskje tom.")
-        st.stop()
+    # ---------------------------------------------------
+    # 2. Definer koordinater for prisområdene
+    # ---------------------------------------------------
+    data = {
+        "price_area": ["NO1", "NO2", "NO3", "NO4", "NO5"],
+        "city": ["Oslo", "Kristiansand", "Trondheim", "Tromsø", "Bergen"],
+        "latitude": [59.9139, 58.1467, 63.4305, 69.6492, 60.3929],
+        "longitude": [10.7522, 7.9956, 10.3951, 18.9560, 5.3240],
+    }
+    cities_df = pd.DataFrame(data)
 
-    # ------------------------
-    # KLARGJØR DATA FOR PLOTTING
-    # ------------------------
-    df_ready = pd.DataFrame(items)
+    # Finn riktig by/koordinater
+    row = cities_df[cities_df["price_area"] == selected_area].iloc[0]
+    lat, lon = row["latitude"], row["longitude"]
+    city = row["city"]
 
-    if df_ready["startTime"].apply(lambda x: isinstance(x, dict)).any():
-        df_ready["startTime"] = df_ready["startTime"].apply(
-            lambda x: x.get("$date") if isinstance(x, dict) else x
+    st.write(f"Henter data for **{city} ({lat:.2f}, {lon:.2f})** for året **{year}** ...")
+
+    # ---------------------------------------------------
+    # 3. Hent data fra API (og cache det)
+    # ---------------------------------------------------
+    @st.cache_data(show_spinner="Henter værdata fra Open-Meteo ...")
+    def load_data(lat, lon, year):
+        return hent_era5_data(lat, lon, year)
+
+    df = load_data(lat, lon, year)
+
+    # ---------------------------------------------------
+    # 4. Forbered data – filtrer kun 2021
+    # ---------------------------------------------------
+    line_chart_data = df.copy()
+
+    # Sørg for at 'time' er datetime og kun 2021
+    line_chart_data["time"] = pd.to_datetime(line_chart_data["time"], errors="coerce")
+    line_chart_data = line_chart_data[line_chart_data["time"].dt.year == year]
+    line_chart_data = line_chart_data.dropna(subset=["time"])
+
+    # Legg til måned og dag
+    line_chart_data["month"] = line_chart_data["time"].dt.month
+    line_chart_data["day"] = line_chart_data["time"].dt.day
+
+    # Finn alle variabler unntatt tid, dag og måned
+    variables = [c for c in line_chart_data.columns if c not in ["time", "month", "day"]]
+
+    # ---------------------------------------------------
+    # 5. Brukergrensesnitt for valg
+    # ---------------------------------------------------
+    pick_a_variable = st.selectbox(
+        "Velg en variabel eller 'Alle variabler':",
+        ["Alle variabler"] + variables
+    )
+
+    months = sorted(line_chart_data["month"].unique())
+    pick_month_range = st.select_slider(
+        "Velg et månedsspenn (kun 2021):",
+        options=months,
+        value=(months[0], months[-1])
+    )
+
+    # Filtrer data på valgt månedsspenn
+    df_plot = line_chart_data[
+        (line_chart_data["month"] >= pick_month_range[0]) &
+        (line_chart_data["month"] <= pick_month_range[1])
+    ]
+
+    # ---------------------------------------------------
+    # 6. Lag plott
+    # ---------------------------------------------------
+    if pick_a_variable == "Alle variabler":
+        fig = px.line(
+            df_plot,
+            x="time",
+            y=variables,
+            title=f"Alle variabler i {city} ({selected_area}) for {year}, måneder {pick_month_range[0]}–{pick_month_range[1]}"
+        )
+    else:
+        fig = px.line(
+            df_plot,
+            x="time",
+            y=pick_a_variable,
+            title=f"{pick_a_variable} i {city} ({selected_area}) for {year}, måneder {pick_month_range[0]}–{pick_month_range[1]}"
         )
 
-    df_ready["startTime"] = pd.to_datetime(df_ready["startTime"], errors="coerce", utc=True)
-    df_ready["startTime"] = df_ready["startTime"].dt.tz_convert(None)
-    df_ready["month"] = df_ready["startTime"].dt.to_period("M").astype(str)
+    fig.update_layout(
+        xaxis_title="Tid",
+        yaxis_title="Verdi",
+        legend_title="Variabler",
+        template="plotly_white"
+    )
 
-    # ------------------------
-    # VISUALISERINGER
-    # ------------------------
-    st.title("Analyse av produksjonsdata")
-    col1, col2 = st.columns(2)
+    # ---------------------------------------------------
+    # 7. Vis graf
+    # ---------------------------------------------------
+    st.plotly_chart(fig, use_container_width=True)
 
-    # Venstre kolonne – kakediagram
-    with col1:
-        st.subheader("Prisområder og fordeling")
-        price_areas = sorted(df_ready["priceArea"].dropna().unique())
-        selected_area = st.radio("Velg prisområde:", price_areas)
-
-        area_data = df_ready[df_ready["priceArea"] == selected_area]
-        if area_data.empty:
-            st.info("Ingen data for valgt prisområde.")
-        else:
-            fig_pie = px.pie(
-                area_data,
-                names="productionGroup",
-                values="quantityKwh",
-                title=f"Fordeling av produksjon i {selected_area}",
-                hole=0.4,
-            )
-            st.plotly_chart(fig_pie, use_container_width=True)
-
-    # Høyre kolonne – linjediagram
-    with col2:
-        st.subheader("Produksjon over tid")
-
-        required = {"priceArea", "productionGroup", "quantityKwh", "startTime", "month"}
-        missing = required - set(df_ready.columns)
-        if missing:
-            st.error(f"Mangler kolonner i data: {sorted(missing)}")
-            st.stop()
-
-        prod_groups_all = sorted(df_ready["productionGroup"].dropna().unique().tolist())
-        months_all = sorted(df_ready["month"].dropna().unique().tolist())
-
-        selected_groups = st.multiselect(
-            "Velg produksjonsgrupper:",
-            options=prod_groups_all,
-            default=prod_groups_all[:2] if len(prod_groups_all) >= 2 else prod_groups_all,
-        )
-        if not selected_groups:
-            st.info("Velg minst én produksjonsgruppe for å vise graf.")
-            st.stop()
-
-        selected_month = st.selectbox("Velg måned:", months_all, index=0)
-
-        filtered = df_ready[
-            (df_ready["priceArea"] == selected_area)
-            & (df_ready["productionGroup"].isin(selected_groups))
-            & (df_ready["month"] == selected_month)
-        ].copy()
-
-        if filtered.empty:
-            st.info("Ingen data for valgt kombinasjon.")
-        else:
-            filtered = filtered.sort_values("startTime")
-            fig_line = px.line(
-                filtered,
-                x="startTime",
-                y="quantityKwh",
-                color="productionGroup",
-                title=f"Produksjon i {selected_area} – {selected_month}",
-                labels={
-                    "startTime": "Tid",
-                    "quantityKwh": "Produksjon (kWh)",
-                    "productionGroup": "Produksjonsgruppe",
-                },
-            )
-            fig_line.update_layout(legend_title_text="Produksjonsgrupper")
-            st.plotly_chart(fig_line, use_container_width=True)
-
-    # Dokumentasjon nederst
-    with st.expander("Datakilde"):
-        st.markdown(
-            """
-            Dataene på denne siden hentes fra **MongoDB**-databasen `elhub_data`,
-            samlingen `production_per_group_hour`.
-            Hver rad representerer én times produksjon for et gitt prisområde og produksjonsgruppe.
-            Kilde: **Elhub / Statnett**.
-            """
-        )
+    # ---------------------------------------------------
+    # 8. Ekstra: vis rådata
+    # ---------------------------------------------------
+    with st.expander("Vis rådata"):
+        st.dataframe(df.head(50))
