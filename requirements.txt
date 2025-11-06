@@ -6,3 +6,4 @@ pymongo
 numpy
 scipy
 scikit-learn
+statsmodels
