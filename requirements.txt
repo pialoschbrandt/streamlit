@@ -9,4 +9,5 @@ scikit-learn
 statsmodels
 python-dateutil
 pytz
+geopandas
 
