@@ -4,7 +4,8 @@ import pandas as pd
 import plotly.express as px
 
 def show():
-    st.header("Live værdata fra Open-Meteo")
+    st.header("🌤️ Live værdata fra Open-Meteo")
+
 
     # Velg by
     cities = {

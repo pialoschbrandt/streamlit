@@ -1,34 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import requests
 
-# -----------------------------
-# Funksjon: hent data fra API
-# -----------------------------
-def hent_era5_data(latitude, longitude, year):
-    """
-    Henter historiske værdata (reanalysis ERA5) fra Open-Meteo API
-    for en gitt posisjon og år. Returnerer et pandas DataFrame.
-    """
-    start_date = f"{year}-01-01"
-    end_date = f"{year}-12-31"
-
-    url = (
-        "https://archive-api.open-meteo.com/v1/era5?"
-        f"latitude={latitude}&longitude={longitude}&"
-        f"start_date={start_date}&end_date={end_date}&"
-        "hourly=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m,wind_direction_10m&"
-        "timezone=auto"
-    )
-
-    response = requests.get(url)
-    response.raise_for_status()
-    data = response.json()
-
-    df = pd.DataFrame(data["hourly"])
-    df["time"] = pd.to_datetime(df["time"], errors="coerce")
-    return df
+# IMPORTER RIKTIG FUNKSJON FRA load_data.py
+from functions.load_data import load_era5_raw
 
 
 # -----------------------------
@@ -59,7 +34,6 @@ def show(df=None):
     }
     cities_df = pd.DataFrame(data)
 
-    # Finn riktig by/koordinater
     row = cities_df[cities_df["price_area"] == selected_area].iloc[0]
     lat, lon = row["latitude"], row["longitude"]
     city = row["city"]
@@ -67,33 +41,30 @@ def show(df=None):
     st.write(f"Henter data for **{city} ({lat:.2f}, {lon:.2f})** for året **{year}** ...")
 
     # ---------------------------------------------------
-    # 3. Hent data fra API (og cache det)
+    # 3. Hent data fra API (cachet)
     # ---------------------------------------------------
     @st.cache_data(show_spinner="Henter værdata fra Open-Meteo ...")
-    def load_data(lat, lon, year):
-        return hent_era5_data(lat, lon, year)
+    def load_weather(lat, lon, year):
+        return load_era5_raw(lat, lon, year)
 
-    df = load_data(lat, lon, year)
+    df = load_weather(lat, lon, year)
 
     # ---------------------------------------------------
-    # 4. Forbered data – filtrer kun 2021
+    # 4. Forbered data
     # ---------------------------------------------------
     line_chart_data = df.copy()
 
-    # Sørg for at 'time' er datetime og kun 2021
     line_chart_data["time"] = pd.to_datetime(line_chart_data["time"], errors="coerce")
     line_chart_data = line_chart_data[line_chart_data["time"].dt.year == year]
     line_chart_data = line_chart_data.dropna(subset=["time"])
 
-    # Legg til måned og dag
     line_chart_data["month"] = line_chart_data["time"].dt.month
     line_chart_data["day"] = line_chart_data["time"].dt.day
 
-    # Finn alle variabler unntatt tid, dag og måned
     variables = [c for c in line_chart_data.columns if c not in ["time", "month", "day"]]
 
     # ---------------------------------------------------
-    # 5. Brukergrensesnitt for valg
+    # 5. UI–valg
     # ---------------------------------------------------
     pick_a_variable = st.selectbox(
         "Velg en variabel eller 'Alle variabler':",
@@ -107,28 +78,27 @@ def show(df=None):
         value=(months[0], months[-1])
     )
 
-    # Filtrer data på valgt månedsspenn
     df_plot = line_chart_data[
         (line_chart_data["month"] >= pick_month_range[0]) &
         (line_chart_data["month"] <= pick_month_range[1])
     ]
 
     # ---------------------------------------------------
-    # 6. Lag plott
+    # 6. Plot
     # ---------------------------------------------------
     if pick_a_variable == "Alle variabler":
         fig = px.line(
             df_plot,
             x="time",
             y=variables,
-            title=f"Alle variabler i {city} ({selected_area}) for {year}, måneder {pick_month_range[0]}–{pick_month_range[1]}"
+            title=f"Alle variabler i {city} ({selected_area}) – måneder {pick_month_range[0]}–{pick_month_range[1]} i 2021"
         )
     else:
         fig = px.line(
             df_plot,
             x="time",
             y=pick_a_variable,
-            title=f"{pick_a_variable} i {city} ({selected_area}) for {year}, måneder {pick_month_range[0]}–{pick_month_range[1]}"
+            title=f"{pick_a_variable} i {city} ({selected_area}) – måneder {pick_month_range[0]}–{pick_month_range[1]} i 2021"
         )
 
     fig.update_layout(
@@ -138,13 +108,10 @@ def show(df=None):
         template="plotly_white"
     )
 
-    # ---------------------------------------------------
-    # 7. Vis graf
-    # ---------------------------------------------------
     st.plotly_chart(fig, use_container_width=True)
 
     # ---------------------------------------------------
-    # 8. Ekstra: vis rådata
+    # 8. Rådata
     # ---------------------------------------------------
     with st.expander("Vis rådata"):
         st.dataframe(df.head(50))

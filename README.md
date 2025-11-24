@@ -9,7 +9,6 @@ This project is an interactive **Streamlit web application** that combines **ene
 The app provides interactive visualizations and statistical analyses of production and meteorological data across Norwegian price areas (NO1–NO5) for the year 2021.
 
 ---
-
 ## 🚀 Features
 
 The application consists of multiple pages, accessible from the sidebar:
@@ -17,14 +16,17 @@ The application consists of multiple pages, accessible from the sidebar:
 | Page | Name | Description |
 |------|------|--------------|
 | 🏠 **Home** | Introduction | Overview of the project and navigation |
-| 📊 **Page 2: Table** | Elhub Raw Data | Displays production data from MongoDB with pie and line charts |
+| 📊 **Page 2: Table** | Elhub Raw Data | Displays production and consumption data from MongoDB with pie and line charts |
 | 📈 **Page 3: Plot (API)** | Elhub API Data | Retrieves production data from the Elhub API for the selected price area |
-| ⚙️ **Page 4: Elhub (MongoDB)** | Database Viewer | Connects directly to MongoDB Atlas and loads data with caching |
-| 🌦 **Page 5: Open-Meteo (API)** | Weather Data | Fetches meteorological data (temperature, wind, precipitation) via Open-Meteo API |
-| 🧮 **Page 6: SPC & LOF Analysis** | Statistical Quality Control | Performs outlier detection (SPC) and anomaly detection (LOF) on weather data |
-| 🌈 **Page 7: Open-Meteo Extended** | Advanced Analyses | STL decomposition and Spectrogram analysis of meteorological time series |
+| ⚙️ **Page 4: Elhub (MongoDB)** | Database Viewer | Loads historical Elhub data (production and consumption) from MongoDB with caching |
+| 🌦 **Page 5: Open-Meteo (API)** | Weather Data | Fetches weather data (temperature, wind, precipitation, snow depth) from the Open-Meteo ERA5 API |
+| 🧮 **Page 6: SPC & LOF Analysis** | Statistical Quality Control | Outlier detection using SPC and LOF on meteorological variables |
+| 🌈 **Page 7: Open-Meteo Extended** | Advanced Analyses | STL decomposition, spectrograms and transformation-based weather analysis |
+| 📉 **Correlation Analysis** | Weather–Energy Correlation | Computes sliding correlations between weather variables and energy signals |
+| 🔮 **Energy Forecast (SARIMAX)** | Forecasting | Forecasts production, consumption and net load using SARIMAX with configurable model parameters |
+| 🗺 **Geo** | Geospatial View | Provides geospatial visualizations including wind direction, clusters and map overlays |
+| ❄️ **Snow Drift** | Snow & Wind Analysis | Snow drift modelling and wind rose generation |
 
----
 
 ## 🧠 Key Concepts
 
@@ -37,20 +39,24 @@ The application consists of multiple pages, accessible from the sidebar:
 ---
 
 ## 🧰 Technologies Used
+## Libraries Used
 
 | Library | Purpose |
-|----------|----------|
-| `streamlit` | Frontend framework for the interactive web app |
-| `pandas` | Data manipulation and analysis |
-| `plotly.express` | Interactive visualizations |
-| `plotly.graph_objects` | Advanced chart customization (STL, spectrogram, SPC) |
-| `requests` | API requests (Elhub & Open-Meteo) |
-| `pymongo` | MongoDB connectivity |
-| `scikit-learn` | Local Outlier Factor (LOF) anomaly detection |
-| `numpy`, `scipy` | Numerical processing and DCT transformations |
-| `statsmodels` | STL decomposition for time series |
-| `urllib.parse` | Secure URI handling for database credentials |
-
+|---------|---------|
+| streamlit | Frontend framework for building the interactive web application |
+| pandas | Data manipulation, time-series handling, cleaning and aggregation |
+| numpy | Numerical computing and array operations |
+| scipy | Numerical transformations (including DCT), signal analysis |
+| plotly | Interactive charting and dashboard visualizations |
+| plotly.express | Quick high-level chart API |
+| plotly.graph_objects | Advanced chart customization (STL, spectrogram, SPC, forecasting plots) |
+| requests | API requests for Elhub API and Open-Meteo ERA5 |
+| pymongo | MongoDB Atlas connectivity and data retrieval |
+| scikit-learn | Outlier detection using LOF, correlation utilities |
+| statsmodels | Time-series forecasting (SARIMAX), STL decomposition, statistical modeling |
+| python-dateutil | Date/time parsing and manipulation |
+| pytz | Time zone conversions for timestamps |
+| urllib.parse | Safe URI handling for MongoDB credentials |
 ---
 
 ## ⚙️ Local Installation
@@ -90,25 +96,29 @@ On Page 2, select your preferred price area (NO1–NO5) — this selection is st
 | **MongoDB Atlas**   | Cloud-hosted database containing Elhub production data                | [https://www.mongodb.com/atlas](https://www.mongodb.com/atlas) |
 
 ## Project Structure:
-📦 pialoschbrandt-app/
-├── modules/
-│   ├── page_1.py          # Home
-│   ├── page_2.py          # Elhub data table
-│   ├── page_3.py          # Elhub API plots (STL, spectrogram)
-│   ├── page_4.py          # MongoDB data retrieval
-│   ├── page_5.py          # Open-Meteo data display
-│   ├── page_6.py          # SPC and LOF statistical analysis
-│   ├── page_7.py          # Extended analyses (spectrogram/STL)
-├── streamlit_app.py       # Main app entry point and navigation
-├── requirements.txt        # Dependencies
-└── README.md               # Documentation
 
-## Example Workflow:
-Go to Page 2 and select a price area (NO1–NO5).
-On Page 5, the app fetches weather data for the corresponding region.
-On Page 6, use the SPC and LOF tabs to analyze temperature outliers and precipitation anomalies.
-Optionally, explore Page 7 for STL and spectrogram analysis.
-All data and selections are automatically shared between pages using st.session_state.
+
+pialoschbrandt-app/
+├── modules/
+│   ├── page_1.py             # Home
+│   ├── page_2.py             # Elhub raw data table
+│   ├── page_3.py             # Elhub API plots (STL, spectrogram)
+│   ├── page_4.py             # MongoDB data retrieval (production & consumption)
+│   ├── page_5.py             # Open-Meteo weather data display
+│   ├── page_6.py             # SPC and LOF statistical analysis
+│   ├── page_7.py             # Extended weather analyses (spectrogram/STL)
+│   ├── page_corr.py          # Weather–energy correlation analysis
+│   ├── page_forecast.py      # SARIMAX forecasting (production, consumption, net load)
+│   ├── page_Geo.py           # Geospatial map and wind data
+│   ├── page_Snow.py          # Snow drift modelling and snow/wind stats
+├── functions/
+│   ├── data_loader.py        # Shared data loading utilities
+│   └── load_elhub_data.py    # Dedicated loader for Elhub production/consumption
+│
+├── streamlit_app.py          # Main app entry point and navigation
+├── requirements.txt          # Project dependencies (libraries used)
+└── README.md                 # Full documentation for the application
+     # Documentation
 
 ## Summary:
 This project demonstrates:

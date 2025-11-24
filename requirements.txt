@@ -7,3 +7,6 @@ numpy
 scipy
 scikit-learn
 statsmodels
+python-dateutil
+pytz
+

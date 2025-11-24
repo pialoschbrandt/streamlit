@@ -5,7 +5,7 @@ from scipy.fft import dct, idct
 from sklearn.neighbors import LocalOutlierFactor
 import plotly.graph_objects as go
 
-# 👇 Gjenbruk funksjonen fra page_5
+# Gjenbruk funksjonen fra page_5
 from modules.page_5 import get_or_load_meteo_data
 
 
