@@ -112,13 +112,12 @@ def show():
         # =====================================================================
         @st.cache_data
         def load_geojson():
-            gdf = gpd.read_file(
-                "/Users/pialoschbrandt/Documents/Skole/Semester-5/Ind320/Innlevering1/file.geojson"
-            )
+            gdf = gpd.read_file("file.geojson")
             gdf["ElSpotOmr"] = gdf["ElSpotOmr"].astype(str).str.replace(" ", "")
             return gdf.to_crs(4326)
 
         areas = load_geojson()
+
 
         # =====================================================================
         # 6) STATISTIKK
