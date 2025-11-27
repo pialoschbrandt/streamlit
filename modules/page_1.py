@@ -1,4 +1,8 @@
 import streamlit as st
+import pandas as pd
+import plotly.express as px
+from functions.load_data import load_elhub_data
+
 
 def show():
 
@@ -39,10 +43,10 @@ def show():
     # -------------------------------
     with col2:
         st.markdown("#### 🌦️ Værdata")
-        st.button("Open-Meteo værdata")
+        st.button("Open-Meteo Weather")
 
         st.markdown("#### 🧪 Analyseverktøy")
-        st.button("SPC & LOF analyse")
+        st.button("SPC & LOF Analysis")
 
     # -------------------------------
     # Column 3
@@ -52,7 +56,7 @@ def show():
         st.button("Sliding Correlation")
 
         st.markdown("#### 📊 MongoDB")
-        st.button("MongoDB analyser")
+        st.button("MongoDB Insights")
 
     st.markdown("---")
 
@@ -68,22 +72,25 @@ def show():
     # LEFT COLUMN
     # -------------------------------
     with info1:
+        # ⚡ ENERGY & ELHUB
         st.markdown("### ⚡ Energy & Elhub")
         st.info(
             """
-            - Elhub production statistics  
-            - STL and Spectrogram  
-            - Elhub (MongoDB)  
-            - Energy Forecast (SARIMAX)
+            - Produksjonsanalyse  
+            - Elhub-data (fra MongoDB)  
+            - Tidsserier og visualisering  
+            - STL & Spektrogram  
+            - SARIMAX-baserte prognoser  
             """
         )
 
-        st.markdown("### 🌍 Geo Map & Snow")
+        # 🌍 GEO & SNOW
+        st.markdown("### 🌍 Geo & Snow")
         st.info(
             """
-            - Geografisk visualisering  
-            - Snødriftmodell  
-            - Vindretning og snøtransport  
+            - Geografiske kart  
+            - Snødrift-modellering  
+            - Vindretning & snøtransport  
             """
         )
 
@@ -91,20 +98,24 @@ def show():
     # RIGHT COLUMN
     # -------------------------------
     with info2:
+        # 🌦️ METEOROLOGY
         st.markdown("### 🌦️ Meteorology")
         st.info(
             """
-            - Open-Meteo Raw Data  
-            - Check Weather Data  
+            - Open-Meteo rådata  
+            - Kontroller værdata  
+            - Værvariabler time for time  
             """
         )
 
+        # 🌡️ WEATHER, CONSUMPTION & PRODUCTION
         st.markdown("### 🌡️ Weather, Consumption & Production")
         st.info(
             """
-            - SPC & LOF anomalies (temperatur + nedbør)  
-            - Sliding Window Correlation (vær vs energi)  
-            - Sammenhenger mellom forbruk, produksjon og vær
+            - LOF (Local Outlier Factor) – avviksdeteksjon  
+            - SPC (Statistical Process Control)  
+            - Sliding Window Correlation  
+            - Samspill mellom temperatur, nedbør, forbruk og produksjon  
             """
         )
 

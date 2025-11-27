@@ -14,10 +14,11 @@ def show():
     year_selected = st.selectbox("Velg år:", [2021, 2022, 2023, 2024], index=0)
 
     # ------------------------
-    # 2. LAST DATA (kun én spinner)
+    # 2. LAST DATA MED STATUS
     # ------------------------
-    with st.spinner("📂 Leser Elhub-data"):
-        df_ready = load_elhub_data()   # <-- RIKTIG FUNKSJON
+    with st.status("📂 Leser Elhub-data fra MongoDB...", expanded=False) as status:
+        df_ready = load_elhub_data()
+        status.update(label="✔️ Data lastet og bearbeidet", state="complete")
 
     if df_ready.empty:
         st.error("Ingen data tilgjengelig.")
