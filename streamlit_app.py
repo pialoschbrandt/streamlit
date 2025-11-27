@@ -65,13 +65,21 @@ st.sidebar.title("📍 Navigation")
 
 category = st.sidebar.radio(
     "Choose category:",
-    ["🏠 Home", "⚡ Energy & Elhub", "🌦️ Meteorology", "🌍 Geo & Snow"],
+    [
+        "🏠 Home",
+        "⚡ Energy & Elhub",
+        "🌦️ Meteorology",
+        "Weather, Consumption & Production",
+        "🌍 Geo & Snow"
+    ],
     key="nav_category"
 )
 
+# ---------------- HOME ----------------
 if category == "🏠 Home":
     page = st.sidebar.radio("Subpage:", ["Welcome"], key="nav_home")
 
+# ---------------- ENERGY SECTION ----------------
 elif category == "⚡ Energy & Elhub":
     page = st.sidebar.radio(
         "Subpage:",
@@ -79,23 +87,34 @@ elif category == "⚡ Energy & Elhub":
             "Elhub production statistics",
             "STL and Spectrogram",
             "Elhub (MongoDB)",
-            "SPC and LOF analysis",
-            "Energy Forecast (SARIMAX)",   # ← NEW
+            "Energy Forecast (SARIMAX)",
         ],
         key="nav_energy"
     )
 
+# ---------------- METEOROLOGY ----------------
 elif category == "🌦️ Meteorology":
     page = st.sidebar.radio(
         "Subpage:",
         [
             "Open-Meteo Raw Data",
             "Check weather data",
-            "Sliding Correlation",
         ],
         key="nav_meteo"
     )
 
+# ---------------- NEW CATEGORY ----------------
+elif category == "Weather, Consumption & Production":
+    page = st.sidebar.radio(
+        "Subpage:",
+        [
+            "SPC & LOF anomalies",
+            "Sliding Correlation",
+        ],
+        key="nav_weather_prod"
+    )
+
+# ---------------- GEO ----------------
 elif category == "🌍 Geo & Snow":
     page = st.sidebar.radio(
         "Subpage:",
@@ -105,39 +124,8 @@ elif category == "🌍 Geo & Snow":
 
 
 # ------------------------------------------------------------
-# Background color selector (kept)
+# ROUTING 
 # ------------------------------------------------------------
-color_choice = st.selectbox(
-    "Choose background color:",
-    ["White", "Blue", "Green", "Yellow", "Gray", "Red", "Black"]
-)
-
-colors = {
-    "White": "#FFFFFF",
-    "Blue": "#0000FF",
-    "Green": "#008000",
-    "Yellow": "#FFFF00",
-    "Gray": "#808080",
-    "Red": "#FF0000",
-    "Black": "#000000",
-}
-
-st.markdown(
-    f"""
-    <style>
-    .stApp {{
-        background-color: {colors[color_choice]};
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# ------------------------------------------------------------
-# ROUTING — ALL FIXED (now includes forecast)
-# ------------------------------------------------------------
-
 if page == "Welcome":
     page1()
 
@@ -153,17 +141,19 @@ elif page == "Elhub (MongoDB)":
 elif page == "Open-Meteo Raw Data":
     page5()
 
-elif page == "SPC and LOF analysis":
-    page6()
-
 elif page == "Check weather data":
     page7()
 
-elif page == "Geo Map & Snow Drift":
-    page_geo()
+elif page == "SPC & LOF anomalies":
+    page6()
 
 elif page == "Sliding Correlation":
     page_corr()
 
+elif page == "Geo Map & Snow Drift":
+    page_geo()
+
 elif page == "Energy Forecast (SARIMAX)":  
     page_forecast()
+
+

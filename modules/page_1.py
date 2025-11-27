@@ -11,7 +11,7 @@ def show():
             ⚡ Energi & Klima Dashboard
         </h1>
         <p style='text-align:center; font-size:20px; color:#666; margin-top:0;'>
-            Analyse av energiproduksjon, forbruk, værdata og snødrift i Norge
+            Analyse av energiproduksjon, forbruk, værdata, korrelasjoner og snødrift i Norge
         </p>
         """,
         unsafe_allow_html=True
@@ -19,43 +19,40 @@ def show():
 
     st.markdown("---")
 
+    # ================================
+    # QUICK ACCESS BUTTONS
+    # ================================
     col1, col2, col3 = st.columns(3)
 
     # -------------------------------
-    # ↪ Geo Map
+    # Column 1
     # -------------------------------
     with col1:
         st.markdown("#### 🗺️ Kart & Snø")
-        if st.button("Geo Map & Snow Drift"):
-            st.balloons()
+        st.button("Geo Map & Snow Drift")
 
         st.markdown("#### ⚡ Elhub")
-        if st.button("Elhub produksjon"):
-            st.balloons()
+        st.button("Elhub produksjon")
 
     # -------------------------------
-    # ↪ Weather / SPC
+    # Column 2
     # -------------------------------
     with col2:
         st.markdown("#### 🌦️ Værdata")
-        if st.button("Open-Meteo værdata"):
-            st.balloons()
+        st.button("Open-Meteo værdata")
 
         st.markdown("#### 🧪 Analyseverktøy")
-        if st.button("SPC & LOF analyse"):
-            st.balloons()
+        st.button("SPC & LOF analyse")
 
     # -------------------------------
-    # ↪ Snow / MongoDB
+    # Column 3
     # -------------------------------
     with col3:
-        st.markdown("#### ❄️ Snødrift")
-        if st.button("Snow Drift Analysis"):
-            st.balloons()
+        st.markdown("#### 🔗 Korrelasjoner")
+        st.button("Sliding Correlation")
 
         st.markdown("#### 📊 MongoDB")
-        if st.button("MongoDB analyser"):
-            st.balloons()
+        st.button("MongoDB analyser")
 
     st.markdown("---")
 
@@ -63,7 +60,7 @@ def show():
     # 📘 INFORMASJONSBOKSER
     # ================================
     st.markdown("## 📘 Hva inneholder de ulike sidene?")
-    st.markdown("Her er en oversikt over hva du finner i hver kategori.")
+    st.markdown("En rask oversikt over dashboardets analysefunksjoner:")
 
     info1, info2 = st.columns(2)
 
@@ -77,17 +74,16 @@ def show():
             - Elhub production statistics  
             - STL and Spectrogram  
             - Elhub (MongoDB)  
-            - SPC and LOF analysis  
-            - Forecast av energiproduksjon og energiforbruk (SARIMAX)
+            - Energy Forecast (SARIMAX)
             """
         )
 
         st.markdown("### 🌍 Geo Map & Snow")
         st.info(
             """
-            - Geo Map & Snow Drift  
-            - Statistikk per område  
-            - Snødriftmodell og vindrose  
+            - Geografisk visualisering  
+            - Snødriftmodell  
+            - Vindretning og snøtransport  
             """
         )
 
@@ -100,10 +96,17 @@ def show():
             """
             - Open-Meteo Raw Data  
             - Check Weather Data  
-            - Sliding Correlation  
             """
         )
 
+        st.markdown("### 🌡️ Weather, Consumption & Production")
+        st.info(
+            """
+            - SPC & LOF anomalies (temperatur + nedbør)  
+            - Sliding Window Correlation (vær vs energi)  
+            - Sammenhenger mellom forbruk, produksjon og vær
+            """
+        )
 
     st.markdown("---")
 
@@ -111,8 +114,10 @@ def show():
     # FOOTER
     # ================================
     st.markdown(
-        "<p style='text-align:center; color:#888; font-size:14px;'>"
-        "© 2025 Energi & Klima Dashboard – laget for analyse og utforskning 🎈"
-        "</p>",
+        """
+        <p style='text-align:center; color:#888; font-size:14px;'>
+            © 2025 Energi & Klima Dashboard – laget for innsikt, analyse og utforskning 🌍⚡
+        </p>
+        """,
         unsafe_allow_html=True
     )
