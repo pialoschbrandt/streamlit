@@ -156,22 +156,15 @@ def show():
         # =====================================================================
         st.markdown("## 📊 Oversikt over prisområder")
 
-        styled_stats = (
-            stats.style
-            .background_gradient(cmap="Blues", subset=["Gjennomsnitt (kWh)"])
-            .format({
+        st.dataframe(
+            stats.style.format({
                 "Gjennomsnitt (kWh)": "{:,.0f}",
                 "Antall målinger": "{:,.0f}",
                 "Laveste (kWh)": "{:,.0f}",
                 "Høyeste (kWh)": "{:,.0f}",
-            })
-            .set_properties(**{
-                "font-size": "15px",
-                "border-color": "black"
-            })
+            }),
+            use_container_width=True,
         )
-
-        st.dataframe(styled_stats, use_container_width=True)
 
 
 

@@ -10,4 +10,3 @@ statsmodels
 python-dateutil
 pytz
 shapely
-matplotlib
