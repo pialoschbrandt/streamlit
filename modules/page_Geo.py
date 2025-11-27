@@ -1,11 +1,11 @@
 # page_geo.py
 import streamlit as st
-import geopandas as gpd
 import plotly.express as px
 import plotly.graph_objects as go
 from functions.load_data import load_elhub_data
 import pandas as pd
 import json
+from shapely.geometry import shape
 from modules.page_Snow import show as page_Snow
 
 
@@ -108,17 +108,34 @@ def show():
             st.stop()
 
         # =====================================================================
-        # 5) GEOJSON 
+        # 5) GEOJSON  (NY VERSJON UTEN GEOPANDAS)
         # =====================================================================
         @st.cache_data
         def load_geojson():
-            gdf = gpd.read_file("file.geojson", engine="pyogrio")
+            # Les rå geojson
+            with open("file.geojson", "r", encoding="utf-8") as f:
+                gj = json.load(f)
 
-            gdf["ElSpotOmr"] = gdf["ElSpotOmr"].astype(str).str.replace(" ", "")
-            return gdf.to_crs(4326)
+            rows = []
+            for feat in gj["features"]:
+                props = feat.get("properties", {})
+                # original
+                omr_raw = str(props.get("ElSpotOmr", ""))
+                # samme rensing som du hadde i GeoPandas:
+                omr_clean = omr_raw.replace(" ", "")
+                # oppdater også i selve geojsonet slik at featureidkey matcher
+                props["ElSpotOmr"] = omr_clean
 
-        areas = load_geojson()
+                geom = shape(feat["geometry"])
+                rows.append({
+                    "ElSpotOmr": omr_clean,
+                    "geometry": geom,
+                })
 
+            areas_df = pd.DataFrame(rows)
+            return gj, areas_df
+
+        geojson, areas = load_geojson()
 
         # =====================================================================
         # 6) STATISTIKK
@@ -163,9 +180,12 @@ def show():
         # =====================================================================
         st.markdown("## 🗺️ Kart over elspotområder")
 
+        # merge som før – areas er nå en "vanlig" DataFrame med geometry-kolonne
         areas = areas.merge(stats, how="left", left_on="ElSpotOmr", right_index=True)
-        areas["lat"] = areas.geometry.centroid.y
-        areas["lon"] = areas.geometry.centroid.x
+
+        # centroid-beregning med shapely
+        areas["lat"] = areas["geometry"].apply(lambda g: g.centroid.y)
+        areas["lon"] = areas["geometry"].apply(lambda g: g.centroid.x)
 
         # session state
         if "selected_area" not in st.session_state:
@@ -187,14 +207,13 @@ def show():
         center = {"lat": 65, "lon": 12}
         zoom = 4
         if selected_area and selected_area in areas["ElSpotOmr"].values:
-            geom = areas.loc[areas["ElSpotOmr"] == selected_area, "geometry"].iloc[0]
-            minx, miny, maxx, maxy = geom.bounds
+            geom_sel = areas.loc[areas["ElSpotOmr"] == selected_area, "geometry"].iloc[0]
+            minx, miny, maxx, maxy = geom_sel.bounds
             center = {"lat": (miny + maxy) / 2, "lon": (minx + maxx) / 2}
             span = max(maxy - miny, maxx - minx)
             zoom = 6 if span < 5 else 5
 
-        geojson = json.loads(areas.to_json())
-
+        # Bruk geojson direkte (ikke areas.to_json())
         fig = px.choropleth_mapbox(
             areas,
             geojson=geojson,
@@ -229,20 +248,36 @@ def show():
 
         # Highlight valgt område + lagre koordinat til SNOW
         if selected_area and selected_area in areas["ElSpotOmr"].values:
-            geom = areas.loc[areas["ElSpotOmr"] == selected_area, "geometry"].iloc[0]
-            js = json.loads(gpd.GeoSeries([geom]).to_json())
+            geom_sel = areas.loc[areas["ElSpotOmr"] == selected_area, "geometry"].iloc[0]
             c = areas.loc[areas["ElSpotOmr"] == selected_area].iloc[0]
 
-            # 🔴 Marker valgt polygon
-            fig.add_trace(go.Choroplethmapbox(
-                geojson=js,
-                locations=[0],
-                z=[1],
-                showscale=False,
-                marker_line_color="black",
-                marker_line_width=5,
-                marker_opacity=0
-            ))
+            # Finn riktig feature i geojson etter ElSpotOmr
+            selected_feature = next(
+                (
+                    f
+                    for f in geojson["features"]
+                    if f.get("properties", {}).get("ElSpotOmr") == selected_area
+                ),
+                None,
+            )
+
+            if selected_feature is not None:
+                js = {
+                    "type": "FeatureCollection",
+                    "features": [selected_feature],
+                }
+
+                # 🔴 Marker valgt polygon
+                fig.add_trace(go.Choroplethmapbox(
+                    geojson=js,
+                    locations=[selected_area],
+                    featureidkey="properties.ElSpotOmr",
+                    z=[1],
+                    showscale=False,
+                    marker_line_color="black",
+                    marker_line_width=5,
+                    marker_opacity=0
+                ))
 
             # 🔴 Marker valgt centroid
             fig.add_trace(go.Scattermapbox(
