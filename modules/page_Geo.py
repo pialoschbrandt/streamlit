@@ -108,11 +108,11 @@ def show():
             st.stop()
 
         # =====================================================================
-        # 5) GEOJSON
+        # 5) GEOJSON 
         # =====================================================================
         @st.cache_data
         def load_geojson():
-            gdf = gpd.read_file("Innlevering1/file.geojson")
+            gdf = gpd.read_file("file.geojson")  
             gdf["ElSpotOmr"] = gdf["ElSpotOmr"].astype(str).str.replace(" ", "")
             return gdf.to_crs(4326)
 
