@@ -112,7 +112,8 @@ def show():
         # =====================================================================
         @st.cache_data
         def load_geojson():
-            gdf = gpd.read_file("file.geojson")  
+            gdf = gpd.read_file("file.geojson", engine="pyogrio")
+
             gdf["ElSpotOmr"] = gdf["ElSpotOmr"].astype(str).str.replace(" ", "")
             return gdf.to_crs(4326)
 
